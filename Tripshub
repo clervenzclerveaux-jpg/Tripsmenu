@@ -1,0 +1,369 @@
+--====================================================
+-- TRIPSFAN BUILD TO DEFEND LOOT
+-- R15 | ROBLOX STUDIO
+-- Infinite Jump | Noclip | NOONERS ESP
+-- Adjustable Speed 1-900 | Leave Game
+--====================================================
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+local InfiniteJump = false
+local Noclip = false
+local NoonersESP = false
+local SpeedEnabled = false
+local WalkSpeedValue = 32
+
+local OriginalCollision = {}
+local ESPObjects = {}
+
+--====================================================
+-- GUI
+--====================================================
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "TripsfanBuildMenu"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local Main = Instance.new("Frame")
+Main.Name = "Main"
+Main.Size = UDim2.new(0, 280, 0, 420)
+Main.Position = UDim2.new(0.5, -140, 0.5, -210)
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true
+Main.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 12)
+Corner.Parent = Main
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -50, 0, 55)
+Title.Position = UDim2.new(0, 8, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "TRIPSFAN BUILD TO DEFEND LOOT"
+Title.TextColor3 = Color3.fromRGB(0, 255, 170)
+Title.TextScaled = true
+Title.Font = Enum.Font.GothamBold
+Title.Parent = Main
+
+local function CreateButton(text, position, callback)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(1, -30, 0, 42)
+    Button.Position = position
+    Button.BackgroundColor3 = Color3.fromRGB(40, 45, 60)
+    Button.TextColor3 = Color3.new(1, 1, 1)
+    Button.Text = text
+    Button.TextScaled = true
+    Button.Font = Enum.Font.GothamBold
+    Button.Parent = Main
+
+    local ButtonCorner = Instance.new("UICorner")
+    ButtonCorner.CornerRadius = UDim.new(0, 8)
+    ButtonCorner.Parent = Button
+
+    Button.Activated:Connect(callback)
+    return Button
+end
+
+--====================================================
+-- INFINITE JUMP
+--====================================================
+
+local JumpButton
+
+JumpButton = CreateButton(
+    "Infinite Jump: OFF",
+    UDim2.new(0, 15, 0, 65),
+    function()
+        InfiniteJump = not InfiniteJump
+        JumpButton.Text = "Infinite Jump: " ..
+            (InfiniteJump and "ON" or "OFF")
+    end
+)
+
+UIS.JumpRequest:Connect(function()
+    if not InfiniteJump then return end
+
+    local Character = Player.Character
+    local Humanoid = Character and
+        Character:FindFirstChildOfClass("Humanoid")
+
+    if Humanoid and Humanoid.Health > 0 then
+        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+--====================================================
+-- NOCLIP
+--====================================================
+
+local NoclipButton
+
+local function SetNoclip(enabled)
+    Noclip = enabled
+
+    if not enabled then
+        for Part, OriginalValue in pairs(OriginalCollision) do
+            if Part and Part.Parent then
+                Part.CanCollide = OriginalValue
+            end
+            OriginalCollision[Part] = nil
+        end
+    end
+end
+
+NoclipButton = CreateButton(
+    "Noclip: OFF",
+    UDim2.new(0, 15, 0, 115),
+    function()
+        SetNoclip(not Noclip)
+        NoclipButton.Text = "Noclip: " ..
+            (Noclip and "ON" or "OFF")
+    end
+)
+
+RunService.Stepped:Connect(function()
+    if not Noclip then return end
+
+    local Character = Player.Character
+    if not Character then return end
+
+    for _, Part in ipairs(Character:GetDescendants()) do
+        if Part:IsA("BasePart") then
+            if OriginalCollision[Part] == nil then
+                OriginalCollision[Part] = Part.CanCollide
+            end
+            Part.CanCollide = false
+        end
+    end
+end)
+
+--====================================================
+-- NOONERS ESP
+--====================================================
+
+local ESPButton
+
+local function RemoveESP(Target)
+    if ESPObjects[Target] then
+        ESPObjects[Target]:Destroy()
+        ESPObjects[Target] = nil
+    end
+end
+
+local function AddESP(Target)
+    if Target == Player or not NoonersESP then return end
+
+    local Character = Target.Character
+    if not Character then return end
+
+    RemoveESP(Target)
+
+    local Highlight = Instance.new("Highlight")
+    Highlight.Name = "NOONERS"
+    Highlight.Adornee = Character
+    Highlight.FillColor = Color3.fromRGB(0, 255, 170)
+    Highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    Highlight.FillTransparency = 0.5
+    Highlight.OutlineTransparency = 0
+    Highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    Highlight.Parent = Character
+
+    ESPObjects[Target] = Highlight
+end
+
+local function RefreshESP()
+    for _, Target in ipairs(Players:GetPlayers()) do
+        if Target ~= Player then
+            if NoonersESP then
+                AddESP(Target)
+            else
+                RemoveESP(Target)
+            end
+        end
+    end
+end
+
+ESPButton = CreateButton(
+    "NOONERS ESP: OFF",
+    UDim2.new(0, 15, 0, 165),
+    function()
+        NoonersESP = not NoonersESP
+        ESPButton.Text = "NOONERS ESP: " ..
+            (NoonersESP and "ON" or "OFF")
+        RefreshESP()
+    end
+)
+
+local function SetupPlayer(Target)
+    if Target == Player then return end
+
+    Target.CharacterAdded:Connect(function()
+        task.wait(1)
+        if NoonersESP then AddESP(Target) end
+    end)
+
+    if NoonersESP then AddESP(Target) end
+end
+
+Players.PlayerAdded:Connect(SetupPlayer)
+
+Players.PlayerRemoving:Connect(function(Target)
+    RemoveESP(Target)
+end)
+
+for _, Target in ipairs(Players:GetPlayers()) do
+    SetupPlayer(Target)
+end
+
+--====================================================
+-- ADJUSTABLE SPEED (MAX 900)
+--====================================================
+
+local SpeedButton
+
+local SpeedBox = Instance.new("TextBox")
+SpeedBox.Name = "SpeedInput"
+SpeedBox.Size = UDim2.new(1, -30, 0, 38)
+SpeedBox.Position = UDim2.new(0, 15, 0, 265)
+SpeedBox.BackgroundColor3 = Color3.fromRGB(40, 45, 60)
+SpeedBox.TextColor3 = Color3.new(1, 1, 1)
+SpeedBox.PlaceholderColor3 = Color3.fromRGB(180, 180, 180)
+SpeedBox.PlaceholderText = "Enter speed (1-900)"
+SpeedBox.Text = "32"
+SpeedBox.TextScaled = true
+SpeedBox.ClearTextOnFocus = false
+SpeedBox.Font = Enum.Font.GothamBold
+SpeedBox.Parent = Main
+
+local SpeedCorner = Instance.new("UICorner")
+SpeedCorner.CornerRadius = UDim.new(0, 8)
+SpeedCorner.Parent = SpeedBox
+
+local function ApplySpeed()
+    local Character = Player.Character
+    local Humanoid = Character and
+        Character:FindFirstChildOfClass("Humanoid")
+
+    if Humanoid then
+        Humanoid.WalkSpeed = SpeedEnabled and WalkSpeedValue or 16
+    end
+end
+
+SpeedBox.FocusLost:Connect(function()
+    local EnteredSpeed = tonumber(SpeedBox.Text)
+
+    if EnteredSpeed then
+        WalkSpeedValue = math.clamp(
+            math.floor(EnteredSpeed),
+            1,
+            900
+        )
+    else
+        WalkSpeedValue = 32
+    end
+
+    SpeedBox.Text = tostring(WalkSpeedValue)
+
+    if SpeedEnabled then ApplySpeed() end
+
+    if SpeedButton then
+        SpeedButton.Text = SpeedEnabled
+            and ("Speed: ON (" .. WalkSpeedValue .. ")")
+            or "Speed: OFF"
+    end
+end)
+
+SpeedButton = CreateButton(
+    "Speed: OFF",
+    UDim2.new(0, 15, 0, 215),
+    function()
+        SpeedEnabled = not SpeedEnabled
+
+        SpeedButton.Text = SpeedEnabled
+            and ("Speed: ON (" .. WalkSpeedValue .. ")")
+            or "Speed: OFF"
+
+        ApplySpeed()
+    end
+)
+
+--====================================================
+-- LEAVE GAME
+--====================================================
+
+local LeaveButton = CreateButton(
+    "LEAVE GAME",
+    UDim2.new(0, 15, 0, 315),
+    function()
+        Player:Kick("You left the game.")
+    end
+)
+
+LeaveButton.BackgroundColor3 = Color3.fromRGB(180, 45, 55)
+
+--====================================================
+-- CLOSE / REOPEN
+--====================================================
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 35, 0, 35)
+CloseButton.Position = UDim2.new(1, -40, 0, 5)
+CloseButton.BackgroundColor3 = Color3.fromRGB(180, 45, 55)
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.new(1, 1, 1)
+CloseButton.TextScaled = true
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.Parent = Main
+
+local Reopen = Instance.new("TextButton")
+Reopen.Size = UDim2.new(0, 150, 0, 42)
+Reopen.Position = UDim2.new(0, 15, 0.5, -21)
+Reopen.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+Reopen.Text = "OPEN TRIPSFAN"
+Reopen.TextColor3 = Color3.fromRGB(0, 255, 170)
+Reopen.TextScaled = true
+Reopen.Font = Enum.Font.GothamBold
+Reopen.Visible = false
+Reopen.Parent = ScreenGui
+
+CloseButton.Activated:Connect(function()
+    Main.Visible = false
+    Reopen.Visible = true
+end)
+
+Reopen.Activated:Connect(function()
+    Main.Visible = true
+    Reopen.Visible = false
+end)
+
+--====================================================
+-- RESPAWN SUPPORT
+--====================================================
+
+Player.CharacterAdded:Connect(function()
+    table.clear(OriginalCollision)
+
+    task.wait(0.5)
+
+    ApplySpeed()
+
+    if Noclip then
+        SetNoclip(true)
+    end
+
+    if NoonersESP then
+        RefreshESP()
+    end
+end)
+
+print("TRIPSFAN BUILD TO DEFEND LOOT loaded!")
+print("Infinite Jump, Noclip, NOONERS ESP, Speed 1-900, Leave Game")
